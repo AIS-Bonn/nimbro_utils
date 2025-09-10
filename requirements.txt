@@ -1,0 +1,11 @@
+numpy                  # tested with 2.3.1     # Required by `geometry.py`, `image.py`, `color.py`, `depth_converter.py`, `tf_oracle.py`, `sensor_interface.py`, `test_image_publisher.py`, and `depth_image_to_pointcloud.py`.
+opencv_python_headless # tested with 4.10.0.84 # Required by `image.py`, `color.py`, `depth_converter.py`, `sensor_interface.py` and `test_image_publisher.py`, and `depth_image_to_pointcloud.py`.
+pillow                 # tested with 10.2.0    # Required by `draw_text()`.
+emoji                  # tested with 2.14.0    # Required by `remove_emoji()`.
+tiktoken               # tested with 0.8.0     # Required by `count_tokens()`.
+scipy                  # tested with 1.16.0    # Required by `rotation_matrix_to_quaternion()` and `rotate_pose()`.
+requests               # tested with 2.32.4    # Required by `download_image()` and used by various image-related functions when passed an image as a URL.
+unidecode              # tested with 1.3.8     # Required by `remove_unicode()` and used by `normalize_string()` if available.
+matplotlib             # tested with 3.6.3     # Used by `show_image()` if available.
+orjson                 # tested with 3.11.0    # Used by `read_json()` and `write_json()` if available with fallback to standard library.
+pybase64               # tested with 1.4.1     # Used by `encode_mask()` and `decode_mask()` if available with fallback to standard library.
