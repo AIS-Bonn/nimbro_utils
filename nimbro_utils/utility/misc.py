@@ -12,6 +12,12 @@ try:
 except ImportError:
     import json
     ORJSON_AVAILABLE = False
+try:
+    import pybase64
+    PYBASE64_AVAILABLE = True
+except ImportError:
+    import base64
+    PYBASE64_AVAILABLE = False
 
 import rclpy
 from rclpy.impl.rcutils_logger import RcutilsLogger
@@ -412,6 +418,28 @@ def assert_keys(obj, keys, mode="whitelist", *, name="dictionary", text=None, lo
                     logger.error(text)
             assert len(forbidden_keys) == 0, _text if text is None else text
 
+def assert_log(expression, message, logger):
+    """
+    Assertion wrapper emitting the assertion message as a log before raising the assertion.
+
+    Parameters:
+        expression (any): The expression to be evaluated as bool, where True passes and False raises.
+        message (str): The message emitted as log and assertion message.
+        logger (RcutilsLogger | nimbro_utils.node_extensions.logger.Logger):
+            Logger used for emitting the assertion log.
+
+    Raises:
+        AssertionError: If input arguments are invalid or the provided expression is not True.
+    """
+    # parse arguments
+    from nimbro_utils.node_extensions.logger import Logger
+    assert_type_value(obj=logger, type_or_value=[RcutilsLogger, Logger], name="argument 'logger'", logger=None)
+    assert_type_value(obj=message, type_or_value=str, name="argument 'message'", logger=logger)
+
+    if not expression:
+        logger.error(message)
+        assert expression, message
+
 def read_json(file_path, name="file", logger=None):
     """
     Read and decode a JSON file.
@@ -423,14 +451,13 @@ def read_json(file_path, name="file", logger=None):
             If provided, logs status/error messages. Defaults to None.
 
     Raises:
-        AssertionError: If input arguments are invalid (excluding invalid file path or file containing invalid JSON).
+        AssertionError: If input arguments are invalid (excluding invalid file path, error while reading file, or decoding it as JSON).
 
     Returns:
         tuple[bool, str, Any]: Success flag, status message, decoded JSON object if success or None if not success.
 
     Notes:
         - If available, this function uses the faster 'orjson' module; otherwise, it falls back to the standard 'json' module.
-
     """
     # parse arguments
     from nimbro_utils.node_extensions.logger import Logger
@@ -443,39 +470,44 @@ def read_json(file_path, name="file", logger=None):
     tic = time.perf_counter()
 
     if not os.path.exists(file_path):
-        message = f"Expected path '{file_path}' to exist."
-        if logger is not None:
-            logger.error(message)
-        assert os.path.exists(file_path), message
-    elif not os.path.isfile(file_path):
-        message = f"Expected path '{file_path}' to be a file."
-        if logger is not None:
-            logger.error(message)
-        assert os.path.isfile(file_path), message
-
-    if logger is not None:
-        logger.debug(f"Reading {name} '{file_path}'")
-
-    try:
-        if ORJSON_AVAILABLE:
-            with open(file_path, "rb") as f:
-                json_object = orjson.loads(f.read())
-        else:
-            if logger is not None:
-                logger.warn(f"Using slow 'json' module to read {name}. Install 'orjson' to speed this up!", once=True)
-            with open(file_path, 'r') as f:
-                json_object = json.load(f)
-    except Exception as e:
         success = False
-        message = f"Failed to read {name} '{file_path}': {repr(e)}"
+        message = f"Failed to read {name} '{file_path}': Path does not exist."
+        if logger is not None:
+            logger.error(message)
+        json_object = None
+    elif not os.path.isfile(file_path):
+        success = False
+        message = f"Failed to read {name} '{file_path}': Path is not a file."
         if logger is not None:
             logger.error(message)
         json_object = None
     else:
         success = True
-        message = f"Read {name} '{file_path}' in '{time.perf_counter() - tic:.3f}s'."
+
+    if success:
+
         if logger is not None:
-            logger.debug(message[:-1])
+            logger.debug(f"Reading {name} '{file_path}'")
+
+        try:
+            if ORJSON_AVAILABLE:
+                with open(file_path, "rb") as f:
+                    json_object = orjson.loads(f.read())
+            else:
+                if logger is not None:
+                    logger.warn(f"Using slow 'json' module to read {name}. Install 'orjson' to speed this up!", once=True)
+                with open(file_path, 'r') as f:
+                    json_object = json.load(f)
+        except Exception as e:
+            success = False
+            message = f"Failed to read or decode {name} '{file_path}': {repr(e)}"
+            if logger is not None:
+                logger.error(message)
+            json_object = None
+        else:
+            message = f"Read {name} '{file_path}' in '{time.perf_counter() - tic:.3f}s'."
+            if logger is not None:
+                logger.debug(message)
 
     return success, message, json_object
 
@@ -492,7 +524,7 @@ def write_json(file_path, json_object, indent=True, name="file", logger=None):
             If provided, logs status/error messages. Defaults to None.
 
     Raises:
-        AssertionError: If input arguments are invalid (excluding invalid file path or invalid JSON object).
+        AssertionError: If input arguments are invalid (excluding invalid file path, error while writing file, or encoding it as JSON).
 
     Returns:
         tuple[bool, str]: Success flag, status message.
@@ -547,16 +579,188 @@ def write_json(file_path, json_object, indent=True, name="file", logger=None):
                 json.dump(json_object, f, indent=2 if indent else None)
     except Exception as e:
         success = False
-        message = f"Failed to write {name} '{file_path}': {repr(e)}"
+        message = f"Failed to write or encode {name} '{file_path}': {repr(e)}"
         if logger is not None:
             logger.error(message)
     else:
         success = True
         message = f"Written {name} '{file_path}' in '{time.perf_counter() - tic:.3f}s'."
         if logger is not None:
-            logger.debug(message[:-1])
+            logger.debug(message)
 
     return success, message
+
+def read_as_b64(file_path, name="file", logger=None):
+    """
+    Read a file as a Base64 encoded ASCII string.
+
+    Args:
+        file_path (str): Path to the file to read.
+        name (str, optional): Descriptive name for logging. Defaults to "file".
+        logger (RcutilsLogger | nimbro_utils.node_extensions.logger.Logger | None, optional):
+            If provided, logs status/error messages. Defaults to None.
+
+    Raises:
+        AssertionError: If input arguments are invalid (excluding invalid file path or error while loading file).
+
+    Returns:
+        tuple[bool, str, str]: Success flag, status message, file as Base64 encoded ASCII string if success or None if not success.
+    """
+    # parse arguments
+    from nimbro_utils.node_extensions.logger import Logger
+    assert_type_value(obj=logger, type_or_value=[RcutilsLogger, Logger, None], name="argument 'logger'", logger=None)
+    assert_type_value(obj=file_path, type_or_value=str, name="argument 'file_path'", logger=logger)
+    assert_type_value(obj=name, type_or_value=str, name="argument 'name'", logger=logger)
+
+    # read and encode file
+
+    tic = time.perf_counter()
+
+    if not os.path.exists(file_path):
+        success = False
+        message = f"Failed to read {name} '{file_path}': Path does not exist."
+        if logger is not None:
+            logger.error(message)
+        obj_str = None
+    elif not os.path.isfile(file_path):
+        success = False
+        message = f"Failed to read {name} '{file_path}': Path is not a file."
+        if logger is not None:
+            logger.error(message)
+        obj_str = None
+    else:
+        success = True
+
+    if success:
+        if logger is not None:
+            logger.debug(f"Reading {name} '{file_path}'")
+
+        try:
+            with open(file_path, "rb") as f:
+                success, message, obj_str = encode_b64(
+                    obj=f.read(),
+                    name=name,
+                    logger=logger
+                )
+        except Exception as e:
+            success = False
+            message = f"Failed to read {name}: {repr(e)}"
+            if logger is not None:
+                logger.error(message)
+            obj_str = None
+        else:
+            if success:
+                message = f"Read and encoded {name} as Base64 '{file_path}' in '{time.perf_counter() - tic:.3f}s'."
+                if logger is not None:
+                    logger.debug(message)
+
+    return success, message, obj_str
+
+def encode_b64(obj, name="object", logger=None):
+    """
+    Encode a bytes-like object as a Base64 ASCII string.
+
+    Args:
+        obj (bytes): Object to be encoded as bytes.
+        name (str, optional): Descriptive name for logging. Defaults to "object".
+        logger (RcutilsLogger | nimbro_utils.node_extensions.logger.Logger | None, optional):
+            If provided, logs status/error messages. Defaults to None.
+
+    Raises:
+        AssertionError: If input arguments are invalid.
+
+    Returns:
+        tuple[bool, str, str]: Success flag, status message, object encoded as Base64 string if success or None if not success.
+
+    Notes:
+        - If available, this function uses the faster 'pybase64' module; otherwise, it falls back to the standard 'base64' module.
+    """
+    # parse arguments
+    from nimbro_utils.node_extensions.logger import Logger
+    assert_type_value(obj=logger, type_or_value=[RcutilsLogger, Logger, None], name="argument 'logger'", logger=None)
+    assert_type_value(obj=obj, type_or_value=bytes, name="argument 'obj'", logger=logger)
+    assert_type_value(obj=name, type_or_value=str, name="argument 'name'", logger=logger)
+
+    # encode object
+
+    tic = time.perf_counter()
+
+    if logger is not None:
+        logger.debug(f"Encoding {name} as Base64")
+
+    try:
+        if PYBASE64_AVAILABLE:
+            obj_str = pybase64.b64encode(obj).decode('ascii')
+        else:
+            if logger is not None:
+                logger.warn(f"Using slow 'base64' module to encode {name}. Install 'pybase64' to speed this up!", once=True)
+            obj_str = base64.b64encode(obj).decode('ascii')
+    except Exception as e:
+        success = False
+        message = f"Failed to encode {name} as Base64: {repr(e)}"
+        if logger is not None:
+            logger.error(message)
+        obj_str = None
+    else:
+        success = True
+        message = f"Encoded {name} as Base64 in '{time.perf_counter() - tic:.3f}s'."
+        if logger is not None:
+            logger.debug(message)
+
+    return success, message, obj_str
+
+def decode_b64(string, name="object", logger=None):
+    """
+    Decode a Base64 encoded ASCII string to bytes.
+
+    Args:
+        string (str): Base64 encoded ASCII string.
+        name (str, optional): Descriptive name for logging. Defaults to "object".
+        logger (RcutilsLogger | nimbro_utils.node_extensions.logger.Logger | None, optional):
+            If provided, logs status/error messages. Defaults to None.
+
+    Raises:
+        AssertionError: If input arguments are invalid (excluding invalid Base64 string or decoding error).
+
+    Returns:
+        tuple[bool, str, bytes]: Success flag, status message, decoded object bytes if success or None if not success.
+
+    Notes:
+        - If available, this function uses the faster 'pybase64' module; otherwise, it falls back to the standard 'base64' module.
+    """
+    # parse arguments
+    from nimbro_utils.node_extensions.logger import Logger
+    assert_type_value(obj=logger, type_or_value=[RcutilsLogger, Logger, None], name="argument 'logger'", logger=None)
+    assert_type_value(obj=string, type_or_value=str, name="argument 'string'", logger=logger)
+    assert_type_value(obj=name, type_or_value=str, name="argument 'name'", logger=logger)
+
+    # decode object
+
+    tic = time.perf_counter()
+
+    if logger is not None:
+        logger.debug(f"Decoding {name} from Base64")
+
+    try:
+        if PYBASE64_AVAILABLE:
+            obj_bytes = pybase64.b64decode(string, altchars=None, validate=True)
+        else:
+            if logger is not None:
+                logger.warn(f"Using slow 'base64' module to read {name}. Install 'pybase64' to speed this up!", once=True)
+            obj_bytes = base64.b64decode(string, altchars=None, validate=True)
+    except Exception as e:
+        success = False
+        message = f"Failed to decode {name} from Base64: {repr(e)}"
+        if logger is not None:
+            logger.error(message)
+        obj_bytes = None
+    else:
+        success = True
+        message = f"Decoded {name} from Base64 in '{time.perf_counter() - tic:.3f}s'."
+        if logger is not None:
+            logger.debug(message)
+
+    return success, message, obj_bytes
 
 def update_dict(old_dict, new_dict=None, deepcopy=False, key_name=None, logger=None, info=True, debug=False):
     """

@@ -202,7 +202,7 @@ def block_until_future_complete(node, future, timeout=None):
     Args:
         node (Node): The node object which contains the executor to spin.
         future (Future): The future object to monitor for completion.
-        timeout_sec (float, optional): The time in seconds to wait for the future to complete.
+        timeout_sec (float | int | None, optional): The time in seconds to wait for the future to complete.
                                        Use None to block indefinitely. Defaults to None.
 
     Returns:
@@ -222,7 +222,7 @@ def block_until_future_complete(node, future, timeout=None):
     # parse arguments
     assert_type_value(obj=node, type_or_value=Node, name="argument 'node'")
     assert_type_value(obj=future, type_or_value=Future, name="argument 'future'")
-    assert_type_value(obj=timeout, type_or_value=[float, None], name="argument 'timeout_sec'")
+    assert_type_value(obj=timeout, type_or_value=[float, int, None], name="argument 'timeout_sec'")
 
     condition = threading.Condition()
     done_flag = [False]
@@ -235,6 +235,9 @@ def block_until_future_complete(node, future, timeout=None):
     future.add_done_callback(future_done_cb)
 
     start_time = time.monotonic()
+
+    if timeout is not None:
+        timeout = float(timeout)
 
     with condition:
         while not done_flag[0]:

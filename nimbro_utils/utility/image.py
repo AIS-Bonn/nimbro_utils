@@ -996,8 +996,8 @@ def visualize_detections(image, boxes, masks=None, labels=None, box_format="xyxy
         for value in box:
             assert_type_value(obj=value, type_or_value=int, name="all values in a single box in argument 'boxes'")
             assert value >= 0, f"{value}"
-        assert box[0] > 0, f"Expected value in argument 'boxes' for x0 '{box[0]}' > 0."
-        assert box[1] > 0, f"Expected value in argument 'boxes' for y0 '{box[1]}' > 0."
+        assert box[0] >= 0, f"Expected value in argument 'boxes' for x0 '{box[0]}' >= 0."
+        assert box[1] >= 0, f"Expected value in argument 'boxes' for y0 '{box[1]}' >= 0."
         assert box[2] > 0, f"Expected value in argument 'boxes' for x1/w '{box[2]}' > 0."
         assert box[3] > 0, f"Expected value in argument 'boxes' for y1/h '{box[3]}' > 0."
         if box_format == "xyxy_absolute":
@@ -1017,6 +1017,7 @@ def visualize_detections(image, boxes, masks=None, labels=None, box_format="xyxy
 
     assert_type_value(obj=masks, type_or_value=[list, tuple, None], name="argument 'masks'")
     if masks is not None:
+        assert len(masks) == len(boxes), f"Expected the number of values in arguments 'boxes' and 'masks' to match but got '{len(boxes)}' and '{len(masks)}'."
         for i in range(len(masks)):
             assert_type_value(obj=masks[i], type_or_value=[list, tuple, np.ndarray, None], name="all values in argument 'masks'")
             if isinstance(masks[i], (list, tuple)):
@@ -1024,6 +1025,7 @@ def visualize_detections(image, boxes, masks=None, labels=None, box_format="xyxy
             if masks[i] is not None:
                 assert masks[i].dtype == np.bool_, f"{masks[i].dtype}"
                 assert masks[i].shape == image.shape[:2], f"{masks[i].shape} {image.shape[:2]}"
+
     assert_type_value(obj=labels, type_or_value=[list, tuple, None], name="argument 'labels'")
     if labels is not None:
         assert len(labels) == len(boxes), f"Expected the number of values in arguments 'boxes' and 'labels' to match but got '{len(boxes)}' and '{len(labels)}'."

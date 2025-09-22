@@ -82,6 +82,7 @@ from nimbro_utils.utility.string import remove_ansi_escape
 from nimbro_utils.utility.string import levenshtein
 from nimbro_utils.utility.string import levenshtein_match
 from nimbro_utils.utility.string import is_url
+from nimbro_utils.utility.string import is_base64
 from nimbro_utils.utility.string import is_attribute_name
 from nimbro_utils.utility.string import count_tokens
 from nimbro_utils.utility.string import split_sentences
@@ -92,8 +93,12 @@ from nimbro_utils.utility.misc import escape
 from nimbro_utils.utility.misc import assert_type_value
 from nimbro_utils.utility.misc import assert_attribute
 from nimbro_utils.utility.misc import assert_keys
+from nimbro_utils.utility.misc import assert_log
 from nimbro_utils.utility.misc import read_json
 from nimbro_utils.utility.misc import write_json
+from nimbro_utils.utility.misc import read_as_b64
+from nimbro_utils.utility.misc import encode_b64
+from nimbro_utils.utility.misc import decode_b64
 from nimbro_utils.utility.misc import update_dict
 from nimbro_utils.utility.misc import count_duplicates
 from nimbro_utils.utility.misc import start_jobs

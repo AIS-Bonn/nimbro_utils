@@ -12,6 +12,9 @@ except ImportError:
 
 from nimbro_utils.utility.misc import assert_type_value
 
+url_pattern = re.compile(r'^(https?):\/\/\S+$')
+base64_pattern = re.compile(r'^[A-Za-z0-9+/]*$')
+
 # normalization
 
 def normalize_string(string, remove_underscores=False, remove_punctuation=False, remove_common_specials=False, reduce_whitespaces=False, remove_whitespaces=False, lowercase=False):
@@ -294,7 +297,7 @@ def levenshtein_match(word, labels, threshold=0, normalization=False):
 
 def is_url(string):
     """
-    Check if a provided string is a valid URL.
+    Check if a string is a valid URL.
 
     Args:
         string (str): The input string to process.
@@ -310,11 +313,60 @@ def is_url(string):
 
     # identify URL
     # pattern = r'^(http|https):\/\/([\w.-]+)(\.[\w.-]+)+([\/\w\.-]*)*\/?$'
-    pattern = r'^(https?):\/\/\S+$'
     # pattern = r'^(https?):\/\/[^\s\/$.?#].[^\s]*$'
-    valid = bool(re.fullmatch(pattern, string))
+    valid = bool(url_pattern.fullmatch(string))
 
     return valid
+
+def is_base64(string):
+    """
+    Check if a string is valid Base64.
+
+    Args:
+        string (str): The input string to process.
+
+    Raises:
+        AssertionError: If input arguments are invalid.
+
+    Returns:
+        bool: True, if `string` is a valid Base64.
+
+    Notes:
+        - Only standard Base64 characters (A–Z, a–z, 0–9, +, /) and optional padding '=' (up to 2 characters) are considered valid.
+        - URL-safe Base64 is not allowed.
+    """
+    # parse arguments
+    assert_type_value(obj=string, type_or_value=str, name="argument 'string'")
+
+    # identify Base64
+    length = len(string)
+    if length > 0:
+        mod = length % 4
+        if string.strip() != string:
+            return False
+        if mod == 1:
+            return False
+        if string.endswith(('=', '==', '===')):
+            if string.endswith('==='):
+                return False
+            stripped = string.rstrip('=')
+            stripped_len = len(stripped)
+            padding_count = length - stripped_len
+            if padding_count > 2:
+                return False
+            stripped_mod = stripped_len % 4
+            if padding_count == 2 and stripped_mod != 2:
+                return False
+            if padding_count == 1 and stripped_mod != 3:
+                return False
+        else:
+            if mod != 0:
+                return False
+            stripped = string
+        if '=' in stripped or not base64_pattern.fullmatch(stripped):
+            return False
+
+    return True
 
 def is_attribute_name(string):
     """

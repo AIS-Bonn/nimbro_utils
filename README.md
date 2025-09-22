@@ -1,6 +1,6 @@
 # NimbRo Utilities
 
-A diverse collection of ROS2 and robotics-related utilities designed for the [ROS2 Jazzy distribution](https://docs.ros.org/en/jazzy/index.html).
+A diverse collection of ROS2 and robotics-related utilities designed for the [ROS2 Jazzy](https://docs.ros.org/en/jazzy/index.html) distribution.
 
 ## Overview
 

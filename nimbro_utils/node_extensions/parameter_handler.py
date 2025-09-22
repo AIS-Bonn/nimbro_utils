@@ -528,7 +528,7 @@ class ParameterHandler:
             logger=self._logger
         )
         successes, messages = [], []
-        for name, value in parameters.items():
+        for name, value in parameters.items(): # TODO make atomic
             success, message = self.update(name, value)
             successes.append(success)
             messages.append(message)
