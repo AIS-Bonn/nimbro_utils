@@ -79,6 +79,7 @@ from nimbro_utils.utility.string import remove_whitespace
 from nimbro_utils.utility.string import remove_non_alpha_numeric
 from nimbro_utils.utility.string import remove_emoji
 from nimbro_utils.utility.string import remove_ansi_escape
+from nimbro_utils.utility.string import format_number
 from nimbro_utils.utility.string import levenshtein
 from nimbro_utils.utility.string import levenshtein_match
 from nimbro_utils.utility.string import is_url

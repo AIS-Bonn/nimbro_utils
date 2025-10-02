@@ -75,6 +75,7 @@ _lazy_imports = {
     "remove_non_alpha_numeric": ("nimbro_utils.utility.string", "remove_non_alpha_numeric"),
     "remove_emoji": ("nimbro_utils.utility.string", "remove_emoji"),
     "remove_ansi_escape": ("nimbro_utils.utility.string", "remove_ansi_escape"),
+    "format_number": ("nimbro_utils.utility.string", "format_number"),
     "levenshtein": ("nimbro_utils.utility.string", "levenshtein"),
     "levenshtein_match": ("nimbro_utils.utility.string", "levenshtein_match"),
     "is_url": ("nimbro_utils.utility.string", "is_url"),

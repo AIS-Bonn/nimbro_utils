@@ -82,7 +82,7 @@ If you utilize this package in your research, please cite one of our relevant pu
     @article{bode24prompt,
         author={Jonas Bode and Bastian P{\"a}tzold and Raphael Memmesheimer and Sven Behnke},
         title={A Comparison of Prompt Engineering Techniques for Task Planning and Execution in Service Robotics},
-        journal={International Conference on Humanoid Robots (Humanoids)},
+        journal={IEEE-RAS International Conference on Humanoid Robots (Humanoids)},
         year={2024}
     }
     ```

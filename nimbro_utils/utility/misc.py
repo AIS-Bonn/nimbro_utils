@@ -568,10 +568,19 @@ def write_json(file_path, json_object, indent=True, name="file", logger=None):
     try:
         if ORJSON_AVAILABLE:
             with open(file_path, "wb") as f:
-                if indent:
-                    f.write(orjson.dumps(json_object, option=orjson.OPT_INDENT_2))
-                else:
-                    f.write(orjson.dumps(json_object))
+                try:
+                    if indent:
+                        f.write(orjson.dumps(json_object, option=orjson.OPT_INDENT_2))
+                    else:
+                        f.write(orjson.dumps(json_object))
+                except Exception as e:
+                    if str(e) == 'Integer exceeds 64-bit range':
+                        if logger is not None:
+                            logger.warn(f"Using slow 'json' module to write {name} after 'orjson' error: {repr(e)}")
+                        with open(file_path, 'w') as f:
+                            json.dump(json_object, f, indent=2 if indent else None)
+                    else:
+                        raise e
         else:
             if logger is not None:
                 logger.warn(f"Using slow 'json' module to write {name}. Install 'orjson' to speed this up!", once=True)
@@ -1161,7 +1170,7 @@ def convert_stamp(stamp, target_format="iso"):
     # print(f"{stamp} ({type(stamp)})\n{target_format}\n{seconds}\n{result}\n{type(result).__name__}\n")
     return result
 
-def log_lines(text, line_length=150, line_highlight="| ", block_format=False, allow_empty_lines=False, max_lines=100, logger=None, severity=None):
+def log_lines(text, line_length=150, line_highlight="| ", block_format=False, allow_empty_lines=False, max_lines=None, logger=None, severity=None):
     """
     Splits the given text into wrapped lines and logs or prints them, adding a prefix to all but the first line.
     Long lines are broken at the nearest space before the maximum length when possible. Output is either printed
@@ -1182,8 +1191,8 @@ def log_lines(text, line_length=150, line_highlight="| ", block_format=False, al
             Defaults to False.
         allow_empty_lines (bool, optional):
             If True, empty lines or lines containing only whitespaces are preserved and logged. Defaults to False.
-        max_lines (int, optional):
-            The maximum number of lines after which input is cutoff and not logged. Defaults to 100.
+        max_lines (int | None, optional):
+            The maximum number of lines after which input is cutoff and not logged. Defaults to None.
         logger (RcutilsLogger | nimbro_utils.node_extensions.logger.Logger | None, optional):
             A logger instance for output. If None, output is printed to standard output. Defaults to None.
         severity (int, optional):
@@ -1205,7 +1214,7 @@ def log_lines(text, line_length=150, line_highlight="| ", block_format=False, al
         assert_type_value(obj=severity, type_or_value=[10, 20, 30, 40, 50], name="argument 'severity'")
     assert_type_value(obj=block_format, type_or_value=bool, name="argument 'block_format'")
     assert_type_value(obj=allow_empty_lines, type_or_value=bool, name="argument 'allow_empty_lines'")
-    assert_type_value(obj=max_lines, type_or_value=int, name="argument 'max_lines'")
+    assert_type_value(obj=max_lines, type_or_value=[int, None], name="argument 'max_lines'")
 
     # define helpers
 
@@ -1271,13 +1280,13 @@ def log_lines(text, line_length=150, line_highlight="| ", block_format=False, al
 
         if block_format:
             for i in range(len(lines) - 1):
-                lines[i] = justify_line(lines[i], is_first and i==0)
+                lines[i] = justify_line(lines[i], is_first and i == 0)
 
         for part in lines:
             log_line(part, is_first)
             num_lines += 1
             is_first = False
-            if num_lines >= abs(max_lines):
+            if isinstance(max_lines, int) and num_lines >= abs(max_lines):
                 log_line("...", is_first)
                 return
 

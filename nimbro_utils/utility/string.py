@@ -2,7 +2,9 @@
 
 import re
 import json
+import math
 import keyword
+from decimal import Decimal, ROUND_HALF_UP
 
 try:
     import unidecode
@@ -200,6 +202,77 @@ def remove_ansi_escape(string):
     normalized = ansi_escape.sub("", string)
 
     return normalized
+
+def format_number(number, integers=1, decimals=2, signed=True):
+    """Formats a number into a fixed-width string.
+
+    Args:
+        number (int or float): The number to format.
+        integers (int): The maximum number of digits for the integer part.
+            Must be > 0. Numbers with fewer digits are padded with spaces.
+            Numbers with more digits (after rounding) will raise a ValueError.
+        decimals (int): The number of decimal places. Must be >= 0.
+            The number will be rounded to this many places.
+        signed (bool): If True, the sign (+/-) is always included.
+            If False, negative numbers will raise a ValueError.
+
+    Raises:
+        AssertionError: If input arguments are invalid.
+        ValueError: If the number is negative and signed is False,
+            or if the number of integer digits exceeds the 'integers' parameter after rounding.
+
+    Returns:
+        str: The formatted number as a string.
+    """
+    # parse arguments
+    assert_type_value(obj=number, type_or_value=[int, float], name="argument 'number'")
+    assert_type_value(obj=integers, type_or_value=int, name="argument 'integers'")
+    assert integers > 0, f"Expected value of argument 'integers' to be greater zero but got '{integers}'."
+    assert_type_value(obj=decimals, type_or_value=int, name="argument 'decimals'")
+    assert decimals >= 0, f"Expected value of argument 'integers' to be greater or equal zero but got '{decimals}'."
+    assert_type_value(obj=signed, type_or_value=bool, name="argument 'signed'")
+
+    if not signed and number < 0:
+        raise ValueError(
+            f"Expected value of argument 'number' to be greater or equal zero given that the value of argument 'signed' is 'False', but got '{number}'."
+        )
+
+    if decimals > 0:
+        width = integers + 1 + decimals
+    else:
+        width = integers
+
+    if math.isnan(number):
+        base_str = 'nan'
+    elif math.isinf(number):
+        base_str = 'inf'
+    else:
+        d = Decimal(str(number))
+        abs_d = abs(d)
+        rounded_d = abs_d.quantize(Decimal(10) ** -decimals, rounding=ROUND_HALF_UP)
+
+        if rounded_d >= Decimal(10)**integers:
+            raise ValueError(
+                f"Expected value of argument 'number' to not exceed the integer digits limited by the value of argument 'integers' set to '{integers}' after rounding, but got '{rounded_d}' >= '{10**integers}'."
+            )
+
+        if decimals > 0:
+            s = format(rounded_d, f'.{decimals}f')
+        else:
+            s = str(int(rounded_d))
+        base_str = s
+
+    num_str = f'{base_str:>{width}}'
+
+    if signed:
+        if math.isnan(number) or (math.isinf(number) and number < 0):
+            sign_char = '-'
+        elif math.isinf(number) and number > 0:
+            sign_char = '+'
+        else:
+            sign_char = '+' if number >= 0 else '-'
+        return sign_char + num_str
+    return num_str
 
 # analysis
 
