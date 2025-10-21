@@ -444,3 +444,41 @@ class Logger:
         See `_log` for further details.
         """
         return self._log("fatal", *args, **kwargs)
+
+    # for full compatibility with RcutilsLogger
+
+    def log(self, *args, **kwargs):
+        return self.get_logger().log(*args, **kwargs)
+
+    def get_child(self, name):
+        assert_type_value(
+            obj=name,
+            type_or_value=str,
+            name="argument 'name'",
+            logger=self.get_logger()
+        )
+        return self.get_logger().get_child(name=name)
+
+    def set_level(self, level):
+        assert_type_value(
+            obj=level,
+            type_or_value=[10, 20, 30, 40, 50],
+            name="argument 'level'",
+            logger=self.get_logger()
+        )
+        return self.set_settings(
+            settings={'severity': int(level)},
+            keep_existing=True
+        )
+
+    def get_effective_level(self):
+        return self.get_severity()
+
+    def is_enabled_for(self, severity):
+        assert_type_value(
+            obj=severity,
+            type_or_value=[10, 20, 30, 40, 50],
+            name="argument 'severity'",
+            logger=self.get_logger()
+        )
+        return self.get_severity() <= severity
